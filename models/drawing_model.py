@@ -12,5 +12,7 @@ class Drawing(SQLModel,table=True):
     uploaded_at:datetime=Field(default_factory=lambda: datetime.now(timezone.utc))
     created_at:datetime=Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at:datetime=Field(default_factory=lambda: datetime.now(timezone.utc))
+    uploader_id: Optional[int] = Field(default=None, foreign_key="user.id")
+
     #Relationships
     uploader:Optional["User"]= Relationship(back_populates="drawings")

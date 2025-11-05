@@ -368,7 +368,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+app/storage/uploads/*
 # Distribution / packaging
 .Python
 build/
