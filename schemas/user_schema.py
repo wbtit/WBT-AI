@@ -1,33 +1,28 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime
 
-class UserCreate(BaseModel):
+class UserBase(BaseModel):
     email: EmailStr
     username: str
+
+class UserCreate(UserBase):
     password: str
-    
-class UserRead(BaseModel):
-    id: int
-    public_id: str
-    email: EmailStr
-    username: str
-    is_active: bool
-    role: str
-    created_at: str
-    updated_at: str
-    
-    class Config:
-        orm_mode = True
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
-    
-class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    password: Optional[str] = None
-    is_active: Optional[bool] = None
-    role: Optional[str] = None
-    
+
+class UserRead(UserBase):
+    id: int
+    public_id: str
+    is_active: bool
+    role: str
+    created_at: datetime
+    updated_at: datetime
+
     class Config:
-        orm_mode = True
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }

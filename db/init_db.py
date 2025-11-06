@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Session, select
 from db.session import engine
 from models.user_model import User
+from models.estimation_model import Estimation, Project
 from models.drawing_model import Drawing # Ensure all models are imported
 from core.security import hash_password
 import os
