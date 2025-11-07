@@ -5,7 +5,8 @@ __pycache__/
 
 # C extensions
 *.so
-./app/api/storage/uploads
+./app/api/storage/uploads/*
+uploaded_drawings/*
 # Distribution / packaging
 .Python
 build/

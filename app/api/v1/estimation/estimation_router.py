@@ -5,7 +5,7 @@ from core.file_storage import save_file
 from models.estimation_model import  Estimation, Project
 from models.drawing_model import Drawing
 from models.user_model import User
-from services.estimation_service import generate_estimation
+from services.estimation_service import ai_estimate
 from db.session import get_session
 from core.deps import get_current_user
 
@@ -31,27 +31,27 @@ async def upload_drawing(
     session.refresh(drawing)
     return {"message":"File uploaded successfully","drawing":drawing}
 
-@router.post("/estimate/{drawing_id}")
-async def estimate_drawing(
-    drawing_id:int,
-    session:Session=Depends(get_session),
-    current_user: User = Depends(get_current_user),
-):
-    drawing = session.get(Drawing,drawing_id)
-    if not drawing:
-        raise HTTPException(status_code=404,detail="Drawing not found")
+# @router.post("/estimate/{drawing_id}")
+# async def estimate_drawing(
+#     drawing_id:int,
+#     session:Session=Depends(get_session),
+#     current_user: User = Depends(get_current_user),
+# ):
+#     drawing = session.get(Drawing,drawing_id)
+#     if not drawing:
+#         raise HTTPException(status_code=404,detail="Drawing not found")
     
-    # Authorization check
-    project = session.get(Project, drawing.project_id)
-    if not project or project.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this drawing")
+#     # Authorization check
+#     project = session.get(Project, drawing.project_id)
+#     if not project or project.owner_id != current_user.id:
+#         raise HTTPException(status_code=403, detail="Not authorized to access this drawing")
 
-    estimates=generate_estimation(drawing.file_path)
-    for e in estimates:
-        est = Estimation(**e,drawing_id=drawing_id)
-        session.add(est)
-    session.commit()
-    return {"message":"Estimation completed","estimations":estimates}
+#     estimates=generate_estimation(drawing.file_path)
+#     for e in estimates:
+#         est = Estimation(**e,drawing_id=drawing_id)
+#         session.add(est)
+#     session.commit()
+#     return {"message":"Estimation completed","estimations":estimates}
 
 @router.get("/list")
 async def list_estimations(
@@ -73,3 +73,29 @@ async def list_estimations(
     )
     results = session.exec(statement).all()
     return {"estimations":results}
+
+@router.post("/ai-estimate/{drawing_id}")
+def ai_estimate_drawing(
+    drawing_id:int,
+    session:Session=Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    drawing = session.get(Drawing,drawing_id)
+    if not drawing:
+        raise HTTPException(status_code=404,detail="Drawing not found")
+    
+    result = ai_estimate(drawing.file_path)
+    
+    for item in result["estimations"]:
+        est = Estimation(
+            drawing_id=drawing.id,
+            category=item["category"],
+            width=item["width"],
+            height=item["height"],
+            material=item["material"],
+            cost=None
+        )
+        session.add(est)
+    session.commit()
+    return {"message":"AI Estimation completed","raw_text":result["raw_text"],"estimations":result["estimations"]}
+        
