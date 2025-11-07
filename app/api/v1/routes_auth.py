@@ -1,9 +1,12 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.user_schema import UserRead,UserCreate,UserLogin
 from sqlmodel import Session, select
 from db.session import get_session
-from models.user_model import User
+from models.user_model import User 
 from core.security import hash_password,verify_password,create_access_token
+from core.deps import get_current_user
+import logging
 
 router = APIRouter()
 
@@ -31,4 +34,14 @@ def login_user(user_data:UserLogin,session:Session= Depends(get_session)):
     
     token = create_access_token({"sub": user.public_id})
     return {"access_token": token,"token_type":"Bearer"}
-    
+
+
+@router.get("/me",response_model=UserRead)
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    logging.info(f"Fetching info for user: {current_user.email}")
+    return current_user
+
+@router.get("/users",response_model=List[UserRead])
+def list_users(session:Session=Depends(get_session)):
+    users = session.exec(select(User)).all()
+    return users

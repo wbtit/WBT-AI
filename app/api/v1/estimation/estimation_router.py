@@ -25,7 +25,7 @@ async def upload_drawing(
         raise HTTPException(status_code=403, detail="Not authorized to modify this project")
     
     file_path = save_file(file)
-    drawing = Drawing(filename=file.filename,file_path=file_path,project_id=project_id)
+    drawing = Drawing(filename=file.filename,file_path=file_path,project_id=project_id,uploader_id=current_user.id,file_type=file.content_type)
     session.add(drawing)
     session.commit()
     session.refresh(drawing)
@@ -52,8 +52,8 @@ async def estimate_drawing(
         session.add(est)
     session.commit()
     return {"message":"Estimation completed","estimations":estimates}
-    
-@router.get("/list") #, response_model=EstimationList)
+
+@router.get("/list")
 async def list_estimations(
     project_id:int,
     session:Session=Depends(get_session),
