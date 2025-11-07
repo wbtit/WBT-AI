@@ -7,6 +7,8 @@ __pycache__/
 *.so
 ./app/api/storage/uploads/*
 uploaded_drawings/*
+keys/*
+
 # Distribution / packaging
 .Python
 build/
