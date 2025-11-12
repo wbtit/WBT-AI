@@ -15,7 +15,10 @@ class Projectread(BaseModel):
     owner_id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
     
 class Projectupdate(BaseModel):
     name:Optional[str]=None
@@ -31,10 +34,12 @@ class Projectlist(BaseModel):
     owner_id:int
     
     class Config:
-        orm_mode = True 
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 class Projectdelete(BaseModel):
     id:int
     
-    class Config:
-        orm_mode = True
+    
