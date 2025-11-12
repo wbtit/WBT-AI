@@ -1,44 +1,51 @@
-import pytesseract
-import cv2
-import fitz
-import os
+from .vision_service import extract_text
+from .vertex_estimation_service import parse_estimation
+from models.estimation_model import Estimation
+from sqlmodel import Session
+import logging
 
-def extract_text_from_pdf(file_path:str)->str:
-    """Extract raw text from PDF using PyMuPDF"""
-    doc = fitz.open(file_path)
-    text=""
-    for page in doc:
-        text+=page.get_text()
-    return text
+logging.basicConfig(filename="ai_debug.log", level=logging.INFO)
 
-def extract_text_from_image(file_path:str)->str:
-    """Extract text from image using pytesseract"""
-    image = cv2.imread(file_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray)
-    return text
-
-def ai_estimate(file_path:str):
-    """
-    MAIN AI LOGIC:
-        1.Dtetct file type
-        2.extract raw text
-        3.process into structured estimations          
-    """
-    ext = os.path.splitext(file_path)[-1].lower()
+def run_ai_estimation(file_path: str, drawing_id: int, session: Session):
+    """Full AI pipeline: OCR → Gemini → structured estimation → DB save."""
+    print(f"🧠 Running AI estimation for file: {file_path}")
     
-    if ext in ['.pdf']:
-        raw_text = extract_text_from_pdf(file_path)
-    elif ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff']:
-        raw_text = extract_text_from_image(file_path)
-    else:
-        raw_text = "Unsupported file type"
+    raw_text = extract_text(file_path)
+    if not raw_text or len(raw_text.strip()) < 20:
+        logging.warning(f"No sufficient text extracted from {file_path}")
+        return []
+
+    structured_data = parse_estimation(raw_text)
+    logging.info(f"Structured data returned: {structured_data}")
+
+    # Save to database
+    estimations = []
+    if isinstance(structured_data, list) and len(structured_data) > 0:
+        for item in structured_data:
+            try:
+                estimation = Estimation(
+                    drawing_id=drawing_id,
+                    category=item.get("type", "Unknown"),
+                    width=float(item.get("width_in", 0.0)) if item.get("width_in") else 0.0,
+                    height=float(item.get("height_in", 0.0)) if item.get("height_in") else 0.0,
+                    material=item.get("material", "Unknown"),
+                    cost=float(item.get("cost")) if item.get("cost") else None
+                )
+                session.add(estimation)
+                estimations.append(estimation)
+                logging.info(f"Created estimation: {estimation}")
+            except Exception as e:
+                logging.error(f"Error creating estimation: {e}")
+                continue
         
-    # TEMP MOCK: Replace this later with real extraction logic
-    return {
-        "raw_text": raw_text[:500],  # first 500 chars
-        "estimations": [
-            {"category": "Beam", "width": 300, "height": 500, "material": "Concrete"},
-            {"category": "Column", "width": 400, "height": 400, "material": "Steel"},
-        ]
-    }
+        try:
+            session.commit()
+            logging.info(f"✅ Saved {len(estimations)} estimations for drawing {drawing_id}")
+        except Exception as e:
+            logging.error(f"Error committing estimations: {e}")
+            session.rollback()
+            return []
+    else:
+        logging.warning(f"No structured data to save: {structured_data}")
+    
+    return estimations
